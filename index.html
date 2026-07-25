@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator & Unit Converter</title>
+  <style>
+    :root {
+      --bg-color: #0d0e10;
+      --card-bg: #17181c;
+      --btn-dark: #212328;
+      --btn-text: #ffffff;
+      --sub-text: #7b7e86;
+      --accent-orange: #ff7300;
+      --menu-bg: #2a2c33;
+      --modal-overlay: rgba(0,0,0,0.6);
+      
+      --glow-orange: rgba(255, 115, 0, 0.6);
+      --glow-std: rgba(255, 255, 255, 0.25);
+      --glow-sci: rgba(255, 115, 0, 0.35);
+    }
+
+    body.light-mode {
+      --bg-color: #eef1f5;
+      --card-bg: #ffffff;
+      --btn-dark: #e4e7ed;
+      --btn-text: #1a1a1a;
+      --sub-text: #666d7a;
+      --accent-orange: #ff7300;
+      --menu-bg: #f0f2f5;
+      --modal-overlay: rgba(0,0,0,0.3);
+
+      --glow-orange: rgba(255, 115, 0, 0.5);
+      --glow-std: rgba(0, 0, 0, 0.15);
+      --glow-sci: rgba(255, 115, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.15s ease, transform 0.1s ease;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 380px;
+      min-height: 640px;
+      background-color: var(--card-bg);
+      border-radius: 30px;
+      padding: 20px 16px 28px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px 15px 10px;
+      color: var(--sub-text);
+      font-size: 14px;
+      font-weight: 500;
+      position: relative;
+    }
+
+    .header-icons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--sub-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+    }
+
+    .icon-btn:hover {
+      color: var(--btn-text);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.9);
+      box-shadow: 0 0 12px var(--glow-orange);
+      color: var(--accent-orange);
+    }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .icon-btn.active {
+      color: var(--accent-orange);
+    }
+
+    /* Dropdown Menu */
+    .menu-dropdown {
+      position: absolute;
+      top: 45px;
+      right: 10px;
+      background-color: var(--menu-bg);
+      border-radius: 12px;
+      padding: 8px 0;
+      width: 140px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 100;
+    }
+
+    .menu-dropdown.show {
+      display: block;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      color: var(--btn-text);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .menu-item:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .menu-item:active {
+      background-color: rgba(255, 115, 0, 0.15);
+    }
+
+    .menu-item svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--accent-orange);
+    }
+
+    /* Screen Views */
+    .view {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .view.hidden {
+      display: none;
+    }
+
+    /* Calculator View */
+    .display {
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      padding: 10px;
+      margin-bottom: 10px;
+      word-break: break-all;
+    }
+
+    .expression {
+      color: var(--sub-text);
+      font-size: 18px;
+      min-height: 24px;
+    }
+
+    .result {
+      color: var(--btn-text);
+      font-size: 46px;
+      font-weight: 300;
+    }
+
+    /* Keypads */
+    .keypad-std {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px 10px;
+    }
+
+    .keypad-sci {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px 8px;
+      margin-bottom: 12px;
+    }
+
+    .keypad-sci.hidden {
+      display: none;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      justify-self: center;
+      color: var(--btn-text);
+      background-color: var(--btn-dark);
+      position: relative;
+    }
+
+    .btn:active {
+      transform: scale(0.92);
+      box-shadow: 0 0 15px var(--glow-std), 0 0 25px var(--glow-std);
+    }
+
+    .btn-sci-mode {
+      width: 52px;
+      height: 48px;
+      font-size: 15px;
+      border-radius: 24px;
+    }
+
+    .btn-sci {
+      color: var(--accent-orange);
+    }
+
+    .btn-sci:active {
+      box-shadow: 0 0 14px var(--glow-sci), 0 0 22px var(--glow-sci);
+    }
+
+    .btn-gray {
+      color: var(--sub-text);
+    }
+
+    .btn-orange {
+      background-color: var(--accent-orange);
+      color: #ffffff;
+      font-size: 22px;
+    }
+
+    .btn-orange:active {
+      box-shadow: 0 0 18px var(--glow-orange), 0 0 30px var(--glow-orange);
+    }
+
+    .btn-orange-text {
+      color: var(--accent-orange);
+      font-weight: bold;
+    }
+
+    .btn-orange-text:active {
+      box-shadow: 0 0 15px var(--glow-sci);
+    }
+
+    .btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    /* Unit Converter Main View */
+    .converter-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      color: var(--btn-text);
+      margin-bottom: 20px;
+      padding: 0 5px;
+    }
+
+    .converter-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .unit-card {
+      background-color: var(--btn-dark);
+      border-radius: 16px;
+      padding: 20px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .unit-card:active {
+      transform: scale(0.94);
+      box-shadow: 0 0 15px var(--glow-sci);
+    }
+
+    .unit-card svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--accent-orange);
+    }
+
+    .unit-card span {
+      color: var(--btn-text);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* Active Conversion UI Screen */
+    .conversion-screen {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding-top: 10px;
+    }
+
+    .convert-box {
+      background-color: var(--btn-dark);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .convert-box select {
+      background: transparent;
+      border: none;
+      color: var(--accent-orange);
+      font-size: 16px;
+      outline: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .convert-box option {
+      background-color: var(--card-bg);
+      color: var(--btn-text);
+    }
+
+    .convert-box input {
+      background: transparent;
+      border: none;
+      color: var(--btn-text);
+      font-size: 28px;
+      outline: none;
+      width: 100%;
+    }
+
+    .swap-btn-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .swap-btn {
+      background-color: var(--btn-dark);
+      border: none;
+      color: var(--accent-orange);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .swap-btn:active {
+      transform: scale(0.9);
+      box-shadow: 0 0 12px var(--glow-sci);
+    }
+
+    .swap-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Modal / Panels */
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--modal-overlay);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 200;
+    }
+
+    .modal-overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal-panel {
+      background-color: var(--card-bg);
+      width: 100%;
+      border-radius: 24px 24px 0 0;
+      padding: 20px;
+      max-height: 80%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--btn-text);
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .history-list {
+      overflow-y: auto;
+      max-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .history-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--btn-dark);
+      padding-bottom: 8px;
+    }
+
+    .history-item .expr {
+      color: var(--sub-text);
+      font-size: 14px;
+    }
+
+    .history-item .res {
+      color: var(--btn-text);
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      color: var(--btn-text);
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--btn-dark);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-orange);
+      box-shadow: 0 0 10px var(--glow-orange);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-mode" id="headerTitle">CLASSIC iOS</div>
+      <div class="header-icons">
+        <!-- Scientific Toggle Button -->
+        <button class="icon-btn" id="sciToggleBtn" title="Toggle Scientific Keys" onclick="toggleScientific()">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+        </button>
+
+        <!-- Grid Icon (Unit Converter Toggle) -->
+        <button class="icon-btn" id="gridBtn" title="Unit Converter" onclick="toggleView()">
+          <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+        </button>
+
+        <!-- Three Dots Menu Button -->
+        <button class="icon-btn" onclick="toggleMenu()">
+          <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+        </button>
+      </div>
+
+      <!-- Menu Dropdown -->
+      <div class="menu-dropdown" id="menuDropdown">
+        <div class="menu-item" onclick="openHistory()">
+          <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          History
+        </div>
+        <div class="menu-item" onclick="openSettings()">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          Settings
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCULATOR VIEW -->
+    <div class="view" id="calcView">
+      <div class="display">
+        <div class="expression" id="expression"></div>
+        <div class="result" id="result">0</div>
+      </div>
+
+      <!-- Hidden Scientific Grid Toggleable -->
+      <div class="keypad-sci hidden" id="sciKeypad">
+        <button class="btn btn-sci-mode btn-sci" onclick="appendFunc('sin')">sin</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendFunc('cos')">cos</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendFunc('tan')">tan</button>
+        <button class="btn btn-sci-mode btn-gray" onclick="toggleRadDeg()" id="radBtn">rad</button>
+        <button class="btn btn-sci-mode btn-gray" onclick="appendFunc('log')">log</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendFunc('sqrt')">√</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendInput('π')">π</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendInput('e')">e</button>
+        <button class="btn btn-sci-mode btn-sci" onclick="appendFunc('factorial')">!</button>
+        <button class="btn btn-sci-mode btn-gray" onclick="appendInput('(')">(</button>
+      </div>
+
+      <!-- Standard Keypad -->
+      <div class="keypad-std">
+        <button class="btn btn-orange-text" onclick="clearAll()">AC</button>
+        <button class="btn btn-gray" onclick="appendInput('%')">%</button>
+        <button class="btn btn-gray" onclick="backspace()">
+          <svg viewBox="0 0 24 24"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.59L17.59 17 14 13.41 10.41 17 9 15.59 12.59 12 9 8.41 10.41 7 14 10.59 17.59 7 19 8.41 15.41 12 19 15.59z"/></svg>
+        </button>
+        <button class="btn btn-orange" onclick="appendInput('÷')">÷</button>
+
+        <button class="btn" onclick="appendInput('7')">7</button>
+        <button class="btn" onclick="appendInput('8')">8</button>
+        <button class="btn" onclick="appendInput('9')">9</button>
+        <button class="btn btn-orange" onclick="appendInput('×')">×</button>
+
+        <button class="btn" onclick="appendInput('4')">4</button>
+        <button class="btn" onclick="appendInput('5')">5</button>
+        <button class="btn" onclick="appendInput('6')">6</button>
+        <button class="btn btn-orange" onclick="appendInput('-')">-</button>
+
+        <button class="btn" onclick="appendInput('1')">1</button>
+        <button class="btn" onclick="appendInput('2')">2</button>
+        <button class="btn" onclick="appendInput('3')">3</button>
+        <button class="btn btn-orange" onclick="appendInput('+')">+</button>
+
+        <button class="btn" onclick="appendInput('00')">00</button>
+        <button class="btn" onclick="appendInput('0')">0</button>
+        <button class="btn" onclick="appendInput('.')">.</button>
+        <button class="btn btn-orange" onclick="calculate()">=</button>
+      </div>
+    </div>
+
+    <!-- UNIT CONVERTER MAIN GRID VIEW -->
+    <div class="view hidden" id="unitView">
+      <div class="converter-header">
+        <span style="cursor: pointer;" onclick="toggleView()">←</span>
+        <span>Unit converter</span>
+      </div>
+      <div class="converter-grid">
+        <div class="unit-card" onclick="openConverter('Currency')">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-1c-1.39-.14-2.74-.86-3.23-2.18-.15-.42.12-.86.56-.86h.22c.28 0 .53.16.65.41.38.83 1.25 1.25 2.11 1.25 1.28 0 2-.69 2-1.58 0-.91-.7-1.39-2.09-1.84l-.53-.17C9.37 12.59 8 11.51 8 9.69 8 8.08 9.35 6.95 11 6.63V5h2v1.07c1.12.18 2.16.78 2.68 1.83.15.3.01.66-.3.81l-.22.11c-.28.14-.61.07-.76-.18-.38-.63-1.04-1.07-1.8-1.07-1.12 0-1.8.62-1.8 1.42 0 .84.66 1.27 1.95 1.69l.52.17c1.51.49 2.93 1.48 2.93 3.37 0 1.74-1.37 2.87-3 3.19V18z"/></svg>
+          <span>Currency</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Length')">
+          <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v2h2V8h2v4h2V8h2v2h2V8h2v8z"/></svg>
+          <span>Length</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Area')">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+          <span>Area</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Volume')">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+          <span>Volume</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Weight')">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V18z"/></svg>
+          <span>Weight</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Temperature')">
+          <svg viewBox="0 0 24 24"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-3-8c.55 0 1 .45 1 1v3h-2V6c0-.55.45-1 1-1z"/></svg>
+          <span>Temperature</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Speed')">
+          <svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 2 18h20a10 10 0 0 0-1.62-9.43zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+          <span>Speed</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Pressure')">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+          <span>Pressure</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Power')">
+          <svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+          <span>Power</span>
+        </div>
+        <div class="unit-card" onclick="openConverter('Number system')">
+          <svg viewBox="0 0 24 24"><path d="M4 17h16v2H4zm13-6.17L15.59 9.4 12 13 8.41 9.4 7 10.83l5 5zM12 3L7 7.83l1.41 1.41L12 5.83l3.59 3.41L17 7.83z"/></svg>
+          <span>Number system</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVE CONVERSION FUNCTIONALITY VIEW -->
+    <div class="view hidden" id="conversionScreenView">
+      <div class="converter-header">
+        <span style="cursor: pointer;" onclick="closeConverter()">←</span>
+        <span id="activeUnitTitle">Converter</span>
+      </div>
+
+      <div class="conversion-screen">
+        <!-- Input Unit Box -->
+        <div class="convert-box">
+          <select id="fromUnitSelect" onchange="runConversion()"></select>
+          <input type="text" id="fromInput" value="1" oninput="runConversion()">
+        </div>
+
+        <!-- Swap Units Button -->
+        <div class="swap-btn-container">
+          <button class="swap-btn" onclick="swapUnits()">
+            <svg viewBox="0 0 24 24"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+          </button>
+        </div>
+
+        <!-- Output Unit Box -->
+        <div class="convert-box">
+          <select id="toUnitSelect" onchange="runConversion()"></select>
+          <input type="text" id="toInput" readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL (History & Settings) -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+      <div class="modal-panel" onclick="event.stopPropagation()">
+        
+        <!-- HISTORY PANEL CONTENT -->
+        <div id="historyContent" class="hidden">
+          <div class="panel-header">
+            <span>Calculation History</span>
+            <span style="cursor:pointer; color:var(--accent-orange); font-size:14px" onclick="clearHistory()">Clear</span>
+          </div>
+          <div class="history-list" id="historyList">
+            <div style="color:var(--sub-text); text-align:center; padding: 20px;">No history available</div>
+          </div>
+        </div>
+
+        <!-- SETTINGS PANEL CONTENT -->
+        <div id="settingsContent" class="hidden">
+          <div class="panel-header">
+            <span>Settings</span>
+            <span style="cursor:pointer; color:var(--accent-orange)" onclick="closeModalDirect()">Done</span>
+          </div>
+          <div class="setting-row">
+            <span>Light / Dark Theme</span>
+            <label class="switch">
+              <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const calcView = document.getElementById('calcView');
+    const unitView = document.getElementById('unitView');
+    const conversionScreenView = document.getElementById('conversionScreenView');
+    const gridBtn = document.getElementById('gridBtn');
+    const headerTitle = document.getElementById('headerTitle');
+    const menuDropdown = document.getElementById('menuDropdown');
+    const sciKeypad = document.getElementById('sciKeypad');
+    const sciToggleBtn = document.getElementById('sciToggleBtn');
+    
+    const expressionEl = document.getElementById('expression');
+    const resultEl = document.getElementById('result');
+    const historyList = document.getElementById('historyList');
+
+    const activeUnitTitle = document.getElementById('activeUnitTitle');
+    const fromUnitSelect = document.getElementById('fromUnitSelect');
+    const toUnitSelect = document.getElementById('toUnitSelect');
+    const fromInput = document.getElementById('fromInput');
+    const toInput = document.getElementById('toInput');
+
+    let currentInput = '';
+    let isRad = true;
+    let history = [];
+    let currentCategory = '';
+
+    /* Conversion Database Factors (Normalized to a Base Unit) */
+    const unitData = {
+      'Length': {
+        base: 'Meter',
+        units: {
+          'Meter (m)': 1,
+          'Kilometer (km)': 1000,
+          'Centimeter (cm)': 0.01,
+          'Millimeter (mm)': 0.001,
+          'Mile (mi)': 1609.34,
+          'Yard (yd)': 0.9144,
+          'Foot (ft)': 0.3048,
+          'Inch (in)': 0.0254
+        }
+      },
+      'Area': {
+        base: 'Square Meter',
+        units: {
+          'Square Meter (m²)': 1,
+          'Square Kilometer (km²)': 1000000,
+          'Square Foot (ft²)': 0.092903,
+          'Square Inch (in²)': 0.00064516,
+          'Hectare (ha)': 10000,
+          'Acre (ac)': 4046.86
+        }
+      },
+      'Volume': {
+        base: 'Liter',
+        units: {
+          'Liter (L)': 1,
+          'Milliliter (mL)': 0.001,
+          'Cubic Meter (m³)': 1000,
+          'Gallon (US)': 3.78541,
+          'Quart (US)': 0.946353,
+          'Pint (US)': 0.473176,
+          'Cup (US)': 0.24
+        }
+      },
+      'Weight': {
+        base: 'Gram',
+        units: {
+          'Kilogram (kg)': 1000,
+          'Gram (g)': 1,
+          'Milligram (mg)': 0.001,
+          'Pound (lb)': 453.592,
+          'Ounce (oz)': 28.3495,
+          'Metric Ton (t)': 1000000
+        }
+      },
+      'Temperature': {
+        custom: true,
+        units: ['Celsius (°C)', 'Fahrenheit (°F)', 'Kelvin (K)']
+      },
+      'Speed': {
+        base: 'm/s',
+        units: {
+          'Meter/second (m/s)': 1,
+          'Km/hour (km/h)': 0.277778,
+          'Miles/hour (mph)': 0.44704,
+          'Knot (kt)': 0.514444
+        }
+      },
+      'Pressure': {
+        base: 'Pascal',
+        units: {
+          'Pascal (Pa)': 1,
+          'Kilopascal (kPa)': 1000,
+          'Bar': 100000,
+          'PSI': 6894.76,
+          'Atmosphere (atm)': 101325
+        }
+      },
+      'Power': {
+        base: 'Watt',
+        units: {
+          'Watt (W)': 1,
+          'Kilowatt (kW)': 1000,
+          'Horsepower (hp)': 745.7,
+          'Megawatt (MW)': 1000000
+        }
+      },
+      'Currency': {
+        base: 'USD',
+        units: {
+          'USD ($)': 1,
+          'EUR (€)': 1.08,
+          'GBP (£)': 1.27,
+          'INR (₹)': 0.012,
+          'JPY (¥)': 0.0065,
+          'CAD ($)': 0.74,
+          'AUD ($)': 0.65
+        }
+      },
+      'Number system': {
+        custom: true,
+        units: ['Decimal', 'Binary', 'Hexadecimal', 'Octal']
+      }
+    };
+
+    /* Navigation & Screen Views */
+    function toggleView() {
+      if (calcView.classList.contains('hidden')) {
+        calcView.classList.remove('hidden');
+        unitView.classList.add('hidden');
+        conversionScreenView.classList.add('hidden');
+        gridBtn.classList.remove('active');
+        headerTitle.innerText = "CLASSIC iOS";
+      } else {
+        calcView.classList.add('hidden');
+        unitView.classList.remove('hidden');
+        conversionScreenView.classList.add('hidden');
+        gridBtn.classList.add('active');
+        headerTitle.innerText = "Unit converter";
+      }
+      menuDropdown.classList.remove('show');
+    }
+
+    function toggleMenu() {
+      menuDropdown.classList.toggle('show');
+    }
+
+    function toggleScientific() {
+      sciKeypad.classList.toggle('hidden');
+      sciToggleBtn.classList.toggle('active');
+    }
+
+    /* Unit Converter Handler */
+    function openConverter(category) {
+      currentCategory = category;
+      activeUnitTitle.innerText = category;
+
+      fromUnitSelect.innerHTML = '';
+      toUnitSelect.innerHTML = '';
+
+      const catData = unitData[category];
+
+      let keys = [];
+      if (catData.custom) {
+        keys = catData.units;
+      } else {
+        keys = Object.keys(catData.units);
+      }
+
+      keys.forEach((unit, index) => {
+        fromUnitSelect.options.add(new Option(unit, unit));
+        toUnitSelect.options.add(new Option(unit, unit));
+      });
+
+      if (keys.length > 1) {
+        toUnitSelect.selectedIndex = 1;
+      }
+
+      unitView.classList.add('hidden');
+      conversionScreenView.classList.remove('hidden');
+      runConversion();
+    }
+
+    function closeConverter() {
+      conversionScreenView.classList.add('hidden');
+      unitView.classList.remove('hidden');
+    }
+
+    function swapUnits() {
+      const temp = fromUnitSelect.selectedIndex;
+      fromUnitSelect.selectedIndex = toUnitSelect.selectedIndex;
+      toUnitSelect.selectedIndex = temp;
+      runConversion();
+    }
+
+    function runConversion() {
+      const val = parseFloat(fromInput.value);
+      if (isNaN(val)) {
+        toInput.value = '';
+        return;
+      }
+
+      const fromUnit = fromUnitSelect.value;
+      const toUnit = toUnitSelect.value;
+
+      if (currentCategory === 'Temperature') {
+        toInput.value = convertTemperature(val, fromUnit, toUnit);
+      } else if (currentCategory === 'Number system') {
+        toInput.value = convertNumberSystem(val, fromUnit, toUnit);
+      } else {
+        const factors = unitData[currentCategory].units;
+        const inBase = val * factors[fromUnit];
+        const result = inBase / factors[toUnit];
+        toInput.value = parseFloat(result.toFixed(6));
+      }
+    }
+
+    function convertTemperature(val, from, to) {
+      let celsius = val;
+      if (from === 'Fahrenheit (°F)') celsius = (val - 32) * 5/9;
+      if (from === 'Kelvin (K)') celsius = val - 273.15;
+
+      if (to === 'Celsius (°C)') return parseFloat(celsius.toFixed(4));
+      if (to === 'Fahrenheit (°F)') return parseFloat((celsius * 9/5 + 32).toFixed(4));
+      if (to === 'Kelvin (K)') return parseFloat((celsius + 273.15).toFixed(4));
+    }
+
+    function convertNumberSystem(val, from, to) {
+      try {
+        let dec = 0;
+        let strVal = fromInput.value.trim();
+
+        if (from === 'Decimal') dec = parseInt(strVal, 10);
+        else if (from === 'Binary') dec = parseInt(strVal, 2);
+        else if (from === 'Hexadecimal') dec = parseInt(strVal, 16);
+        else if (from === 'Octal') dec = parseInt(strVal, 8);
+
+        if (isNaN(dec)) return 'Invalid';
+
+        if (to === 'Decimal') return dec.toString(10);
+        if (to === 'Binary') return dec.toString(2);
+        if (to === 'Hexadecimal') return dec.toString(16).toUpperCase();
+        if (to === 'Octal') return dec.toString(8);
+      } catch (e) {
+        return 'Error';
+      }
+    }
+
+    /* Calculator Actions */
+    function updateDisplay() {
+      resultEl.innerText = currentInput || '0';
+    }
+
+    function appendInput(val) {
+      currentInput += val;
+      updateDisplay();
+    }
+
+    function appendFunc(func) {
+      currentInput += func + '(';
+      updateDisplay();
+    }
+
+    function clearAll() {
+      currentInput = '';
+      expressionEl.innerText = '';
+      resultEl.innerText = '0';
+    }
+
+    function backspace() {
+      currentInput = currentInput.slice(0, -1);
+      updateDisplay();
+    }
+
+    function toggleRadDeg() {
+      isRad = !isRad;
+      document.getElementById('radBtn').innerText = isRad ? 'rad' : 'deg';
+    }
+
+    function calculate() {
+      if (!currentInput) return;
+
+      let rawExpr = currentInput;
+      expressionEl.innerText = rawExpr;
+
+      try {
+        let parsed = rawExpr
+          .replace(/×/g, '*')
+          .replace(/÷/g, '/')
+          .replace(/%/g, '/100')
+          .replace(/π/g, 'Math.PI')
+          .replace(/\be\b/g, 'Math.E')
+          .replace(/sqrt\(/g, 'Math.sqrt(')
+          .replace(/log\(/g, 'Math.log10(');
+
+        if (isRad) {
+          parsed = parsed
+            .replace(/sin\(/g, 'Math.sin(')
+            .replace(/cos\(/g, 'Math.cos(')
+            .replace(/tan\(/g, 'Math.tan(');
+        } else {
+          parsed = parsed
+            .replace(/sin\((.*?)\)/g, 'Math.sin(($1) * Math.PI / 180)')
+            .replace(/cos\((.*?)\)/g, 'Math.cos(($1) * Math.PI / 180)')
+            .replace(/tan\((.*?)\)/g, 'Math.tan(($1) * Math.PI / 180)');
+        }
+
+        parsed = parsed.replace(/(\d+)!/g, (match, num) => {
+          let n = parseInt(num);
+          let fact = 1;
+          for (let i = 1; i <= n; i++) fact *= i;
+          return fact;
+        });
+
+        let evalResult = Function(`'use strict'; return (${parsed})`)();
+        
+        if (typeof evalResult === 'number' && !Number.isInteger(evalResult)) {
+          evalResult = parseFloat(evalResult.toFixed(8));
+        }
+
+        history.unshift({ expr: rawExpr, res: evalResult });
+
+// Save to MongoDB
+fetch("http://localhost:5000/save", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        expression: rawExpr,
+        result: evalResult
+    })
+});
+
+currentInput = String(evalResult);
+resultEl.innerText = currentInput;
+        
+        currentInput = String(evalResult);
+        resultEl.innerText = currentInput;
+      } catch (err) {
+        resultEl.innerText = 'Error';
+        currentInput = '';
+      }
+    }
+    
+
+    /* Modal / History / Settings Functions */
+    function openHistory() {
+      menuDropdown.classList.remove('show');
+      document.getElementById('historyContent').classList.remove('hidden');
+      document.getElementById('settingsContent').classList.add('hidden');
+      renderHistory();
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function renderHistory() {
+      if (history.length === 0) {
+        historyList.innerHTML = `<div style="color:var(--sub-text); text-align:center; padding: 20px;">No history available</div>`;
+        return;
+      }
+
+      historyList.innerHTML = history.map(item => `
+        <div class="history-item">
+          <div class="expr">${item.expr}</div>
+          <div class="res">${item.res}</div>
+        </div>
+      `).join('');
+    }
+
+    function clearHistory() {
+      history = [];
+      renderHistory();
+    }
+
+    function openSettings() {
+      menuDropdown.classList.remove('show');
+      document.getElementById('settingsContent').classList.remove('hidden');
+      document.getElementById('historyContent').classList.add('hidden');
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closeModal(e) {
+      if (e.target.id === 'modalOverlay') {
+        closeModalDirect();
+      }
+    }
+
+    function closeModalDirect() {
+      document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    function toggleTheme() {
+      const isLight = document.getElementById('themeToggle').checked;
+      if (isLight) {
+        document.body.classList.add('light-mode');
+      } else {
+        document.body.classList.remove('light-mode');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.header-icons') && !e.target.closest('.menu-dropdown')) {
+        menuDropdown.classList.remove('show');
+      }
+    });
+  </script>
+</body>
+</html>
